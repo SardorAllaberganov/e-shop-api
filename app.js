@@ -32,8 +32,23 @@ const API = process.env.API;
 const PORT = process.env.PORT;
 const MONGO_DB = process.env.MONGO_DB;
 
+//CORS
+app.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", ["*"]);
+    res.setHeader(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, DELETE, PATCH, OPTION"
+    );
+    res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization"
+    );
+    next();
+});
+
 //Routes
 const productRoutes = require("./router/product");
+const categoryRoutes = require("./router/category");
 
 //middlewares
 app.use(express.json((express.urlencoded = false)));
@@ -46,6 +61,7 @@ app.use(
     express.static(path.join(__dirname, "uploads/images"))
 );
 app.use(`${API}`, productRoutes);
+app.use(`${API}/categories`, categoryRoutes);
 
 //Database connection
 mongoose
