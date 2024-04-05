@@ -30,7 +30,6 @@ exports.createProduct = (req, res, next) => {
         error.statusCode = 422;
         next(error);
     }
-    console.log(req.file);
     const name = req.body.name;
     const image = req.file.path;
     const countInStock = req.body.countInStock;

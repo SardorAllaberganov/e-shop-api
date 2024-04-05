@@ -4,28 +4,6 @@ const app = express();
 const morgan = require("morgan");
 require("dotenv").config();
 const mongoose = require("mongoose");
-const multer = require("multer");
-
-const fileStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, "uploads/images");
-    },
-    filename: (req, file, cb) => {
-        cb(null, file.originalname);
-    },
-});
-
-const fileFilter = (req, file, cb) => {
-    if (
-        file.mimetype === "image/png" ||
-        file.mimetype === "image/jpg" ||
-        file.mimetype === "image/jpeg"
-    ) {
-        cb(null, true);
-    } else {
-        cb(null, false);
-    }
-};
 
 //Environment variables
 const API = process.env.API;
@@ -43,6 +21,7 @@ app.use((req, res, next) => {
         "Access-Control-Allow-Headers",
         "Content-Type, Authorization"
     );
+    res.setHeader("Content-Type", "application/json");
     next();
 });
 
@@ -53,9 +32,7 @@ const categoryRoutes = require("./router/category");
 //middlewares
 app.use(express.json((express.urlencoded = false)));
 app.use(morgan("tiny"));
-app.use(
-    multer({ storage: fileStorage, fileFilter: fileFilter }).single("image")
-);
+
 app.use(
     "/uploads/images",
     express.static(path.join(__dirname, "uploads/images"))
