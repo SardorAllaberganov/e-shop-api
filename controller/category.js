@@ -7,8 +7,7 @@ exports.categories = (req, res, next) => {
             if (!categories) {
                 const error = new Error("There are no categories found");
                 error.statusCode = 422;
-                next(error);
-                return;
+                throw error;
             }
 
             res.status(200).json({
@@ -18,7 +17,6 @@ exports.categories = (req, res, next) => {
         })
         .catch((error) => {
             next(error);
-            return;
         });
 };
 
@@ -27,68 +25,74 @@ exports.createCategory = (req, res, next) => {
     const color = req.body.color;
     const icon = req.file.path;
 
-    if (!name) {
-        const error = new Error("Name is required");
+    if (!name || name.length === 0) {
+        const error = new Error("Name field is required!");
         error.statusCode = 422;
-        next(error);
-        return;
+        throw error;
     }
-    if (req.file == undefined) {
-        const error = new Error("Please upload a file!");
-        error.statusCode = 400;
-        next(error);
-        return;
+    if (!req.file) {
+        const error = new Error("No image provided!");
+        error.statusCode = 422;
+        throw error;
     }
 
-    Category.findOne({ name: name })
-        .then((categoryDoc) => {
-            if (!categoryDoc) {
-                const category = new Category({
-                    name: name,
-                    color: color,
-                    icon: icon,
-                });
-                category
-                    .save()
-                    .then((result) => {
-                        return res.status(201).json({
-                            message: "Category saved successfully",
-                            category: category,
-                        });
-                    })
-                    .catch((error) => {
-                        next(error);
-                        return;
+    Category.findOne({ name: name }).then((categoryDoc) => {
+        if (!categoryDoc) {
+            const category = new Category({
+                name: name,
+                color: color,
+                icon: icon,
+            });
+            category
+                .save()
+                .then((result) => {
+                    return res.status(201).json({
+                        message: "Category saved successfully",
+                        category: category,
                     });
-            } else {
-                return res
-                    .status(422)
-                    .json({ message: "Category already exist!" });
-            }
-        })
-        .catch((error) => {
-            next(error);
-            return;
-        });
+                })
+                .catch((error) => {
+                    next(error);
+                });
+        } else {
+            clearImage(icon, (error) => {
+                if (error) {
+                    const error = new Error("No image icon");
+                    error.statusCode = 422;
+                    throw error;
+                }
+            });
+            return res.status(422).json({ message: "Category already exist!" });
+        }
+    });
 };
 
 exports.deleteCategory = (req, res, next) => {
-    const id = req.params.id.toString();
+    const name = req.params.name;
     let foundCategory;
-    Category.findById({ _id: id })
+    Category.findOne({ name: name })
         .then((category) => {
             if (!category) {
                 const error = new Error("Category not found to delete!");
                 error.statusCode = 422;
-                next(error);
-                return;
+                throw error;
             }
-            console.log(category);
             foundCategory = category;
-            clearImage(category.icon, (error) => {
-                if (error) return next(error);
-            });
-            return Category.findByIdAndDelete(id);
+            return Category.deleteOne({ name: name })
+                .then(() => {
+                    if (category.icon) {
+                        clearImage(category.icon, (error) => {
+                            if (error) {
+                                const error = new Error("No image icon");
+                                error.statusCode = 422;
+                                throw error;
+                            }
+                        });
+                    }
+                })
+                .catch((error) => {
+                    next(error);
+                });
         })
         .then((result) => {
             return res
@@ -97,6 +101,5 @@ exports.deleteCategory = (req, res, next) => {
         })
         .catch((error) => {
             next(error);
-            return;
         });
 };

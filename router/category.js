@@ -4,7 +4,12 @@ const categoryController = require("../controller/category");
 const uploads = require("../middleware/file-upload");
 
 router.get("/", categoryController.categories);
-router.post("/post", uploads.single("icon"), categoryController.createCategory);
-router.delete("/:id", categoryController.deleteCategory);
+router.post(
+    "/createCategory",
+    uploads.single("icon"),
+    categoryController.createCategory
+);
+
+router.delete("/:name", categoryController.deleteCategory);
 
 module.exports = router;

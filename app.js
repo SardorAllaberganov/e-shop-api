@@ -30,15 +30,21 @@ const productRoutes = require("./router/product");
 const categoryRoutes = require("./router/category");
 
 //middlewares
-app.use(express.json((express.urlencoded = false)));
-app.use(morgan("tiny"));
+app.use(express.json());
+// app.use(express.urlencoded());
+// app.use(express.urlencoded({ extended: false }));
+// app.use(express.multipart())
+app.use(morgan("dev"));
+// const formData = require("express-form-data");
+// app.use(formData.parse());
+
+app.use(`${API}`, productRoutes);
+app.use(`${API}/categories`, categoryRoutes);
 
 app.use(
     "/uploads/images",
     express.static(path.join(__dirname, "uploads/images"))
 );
-app.use(`${API}`, productRoutes);
-app.use(`${API}/categories`, categoryRoutes);
 
 //Database connection
 mongoose
@@ -50,7 +56,7 @@ mongoose
         );
     })
     .catch((err) => {
-        res.status(500).json({ message: error.message });
+        console.log(err);
     });
 
 //Global error handler middleware
@@ -59,6 +65,7 @@ app.use((err, req, res, next) => {
         return res.status(err.statusCode || 500).json({
             statusCode: err.statusCode,
             message: err.message,
+            data: err.data,
         });
     }
 });
