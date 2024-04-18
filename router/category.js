@@ -6,10 +6,12 @@ const uploads = require("../middleware/file-upload");
 router.get("/", categoryController.categories);
 router.post(
     "/createCategory",
-    uploads.single("icon"),
+    uploads.single("image"),
     categoryController.createCategory
 );
 
-router.delete("/:name", categoryController.deleteCategory);
+router.delete("/:id", categoryController.deleteCategory);
+router.get("/:id", categoryController.category);
+router.put("/edit/:id", uploads.single("image"), categoryController.editCategory);
 
 module.exports = router;

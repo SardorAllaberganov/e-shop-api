@@ -2,7 +2,11 @@ const multer = require("multer");
 
 const fileStorage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, "uploads/images");
+        if (file.fieldname === "image") {
+            cb(null, "uploads/images/"); 
+        } else if (file.fieldname === "images") {
+            cb(null, "uploads/images/");
+        }
     },
     filename: (req, file, cb) => {
         cb(null, `${Date.now()}-${file.originalname}`);

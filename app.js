@@ -38,7 +38,7 @@ app.use(morgan("dev"));
 // const formData = require("express-form-data");
 // app.use(formData.parse());
 
-app.use(`${API}`, productRoutes);
+app.use(`${API}/products`, productRoutes);
 app.use(`${API}/categories`, categoryRoutes);
 
 app.use(

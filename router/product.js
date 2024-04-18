@@ -4,6 +4,13 @@ const productController = require("../controller/product");
 const uploads = require("../middleware/file-upload");
 
 router.get("/", productController.products);
-router.post("/post", uploads.single("image"), productController.createProduct);
+router.post(
+    "/create",
+    uploads.fields([
+        { name: "image", maxCount: 1 },
+        { name: "images", maxCount: 10 },
+    ]),
+    productController.createProduct
+);
 
 module.exports = router;
