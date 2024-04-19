@@ -15,7 +15,8 @@ exports.products = (req, res, next) => {
             totalItems = count;
             return Product.find()
                 .skip((currentPage - 1) * perPage)
-                .limit(perPage);
+                .limit(perPage)
+                .populate("category");
         })
         .then((products) => {
             res.status(200).json({
@@ -109,6 +110,7 @@ exports.product = (req, res, next) => {
     const isValid = isValidId(id);
     if (isValid) {
         Product.findById(id)
+            .populate("category")
             .then((product) => {
                 if (!product) {
                     const error = new Error("Product not found");
@@ -124,5 +126,115 @@ exports.product = (req, res, next) => {
             });
     } else {
         return res.status(400).json({ message: "Not valid ID" });
+    }
+};
+
+exports.editProduct = (req, res, next) => {
+    const imageFile = req.files["image"][0];
+    const imagesFiles = req.files["images"];
+    const imagesPaths = imagesFiles.map((imagePath) => {
+        return imagePath.path;
+    });
+
+    if (!imageFile || !imagesFiles) {
+        const error = new Error("No image provided");
+        error.statusCode = 422;
+        throw error;
+    }
+
+    const clearImages = () => {
+        clearImage(imageFile.path, (error) => {
+            if (error) {
+                const error = new Error("No image icon");
+                error.statusCode = 422;
+                throw error;
+            }
+        });
+        imagesPaths.forEach((imagePath) => {
+            clearImage(imagePath, (error) => {
+                if (error) {
+                    const error = new Error("No image icon");
+                    error.statusCode = 422;
+                    throw error;
+                }
+            });
+        });
+    };
+
+    const isValid = isValidId(req.body.category);
+
+    if (isValid) {
+        Category.findById(req.body.category).then((categoryDoc) => {
+            if (!categoryDoc) {
+                clearImages();
+                const error = new Error("Category not found");
+                error.statusCode = 404;
+                throw error;
+            } else {
+                let updatedProduct;
+                Product.findById(req.params.id)
+                    .then((product) => {
+                        if (!product) {
+                            clearImages();
+                            const error = new Error("Product not found");
+                            error.statusCode = 404;
+                            throw error;
+                        } else {
+                            product.name = req.body.name;
+                            product.description = req.body.description;
+                            product.richDescription = req.body.richDescription;
+                            if (product.image !== imageFile.path)
+                                clearImage(product.image, (error) => {
+                                    if (error) {
+                                        const error = new Error(
+                                            "No image icon"
+                                        );
+                                        error.statusCode = 422;
+                                        throw error;
+                                    }
+                                });
+                            if (
+                                JSON.stringify(product.images) !==
+                                JSON.stringify(imagesPaths)
+                            ) {
+                                product.images.forEach((imagePath) => {
+                                    clearImage(imagePath, (error) => {
+                                        if (error) {
+                                            const error = new Error(
+                                                "No image icon"
+                                            );
+                                            error.statusCode = 422;
+                                            throw error;
+                                        }
+                                    });
+                                });
+                            }
+                            product.image = imageFile.path;
+                            product.images = imagesPaths;
+                            product.brand = req.body.brand;
+                            product.price = req.body.price;
+                            product.category = req.body.category;
+                            product.countInStock = req.body.countInStock;
+                            product.rating = req.body.rating;
+                            product.numReviews = req.body.numReviews;
+                            product.isFeatured = req.body.isFeatured;
+                            updatedProduct = product;
+                            return product.save();
+                        }
+                    })
+                    .then((result) => {
+                        return res.status(200).json({
+                            message: "Product Updated successfully!",
+                            product: updatedProduct,
+                        });
+                    })
+                    .catch((error) => {
+                        next(error);
+                    });
+            }
+        });
+    } else {
+        clearImages();
+        return res.status(400).json({ message: "Not valid category ID" });
     }
 };
