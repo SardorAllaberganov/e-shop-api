@@ -22,5 +22,7 @@ router.post(
     productController.createProduct
 );
 router.delete("/:id", productController.deleteProduct);
+router.get("/get/featured", productController.getFeatured);
+// router.get("/get/filterByCategory", productController.filterByCategory);
 
 module.exports = router;

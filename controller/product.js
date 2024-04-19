@@ -2,6 +2,7 @@ const Product = require("../model/product");
 const Category = require("../model/category");
 const clearImage = require("../helper/clearImage");
 const mongoose = require("mongoose");
+const { category } = require("./category");
 
 const isValidId = (id) => mongoose.isValidObjectId(id);
 
@@ -9,11 +10,18 @@ exports.products = (req, res, next) => {
     const currentPage = req.query.page || 1;
     const perPage = 48;
     let totalItems;
+
+    let filter = {};
+
+    if (req.query.categories) {
+        filter = { category: req.query.categories.split(",") };
+    }
+
     Product.find()
         .countDocuments()
         .then((count) => {
             totalItems = count;
-            return Product.find()
+            return Product.find(filter)
                 .skip((currentPage - 1) * perPage)
                 .limit(perPage)
                 .populate("category");
@@ -21,7 +29,7 @@ exports.products = (req, res, next) => {
         .then((products) => {
             res.status(200).json({
                 products: products,
-                totalItems: totalItems,
+                totalItems: filter ? products.length : totalItems,
                 message: "All Products",
             });
         })
@@ -33,9 +41,11 @@ exports.products = (req, res, next) => {
 exports.createProduct = (req, res, next) => {
     const imageFile = req.files["image"][0];
     const imagesFiles = req.files["images"];
-    const imagesPaths = imagesFiles.map((imagePath) => {
-        return imagePath.path;
-    });
+    const imagesPaths =
+        imagesFiles &&
+        imagesFiles.map((imagePath) => {
+            return imagePath.path;
+        });
 
     if (!imageFile || !imagesFiles) {
         const error = new Error("No image provided");
@@ -291,3 +301,44 @@ exports.deleteProduct = (req, res, next) => {
             });
     }
 };
+
+exports.getFeatured = (req, res, next) => {
+    Product.find({ isFeatured: true })
+        .then((products) => {
+            if (!products) {
+                const error = new Error(
+                    "There is no featured Products in Database"
+                );
+                error.statusCode = 422;
+                throw error;
+            }
+            return res
+                .status(200)
+                .json({ message: "Featured Products", products: products });
+        })
+        .catch((error) => {
+            next(error);
+        });
+};
+
+// exports.filterByCategory = (req, res, next) => {
+//     const category = req.query.category;
+//     if (category) {
+//         Product.find({ category: [category.split(",")] })
+//             .then((products) => {
+//                 if (!products) {
+//                     const error = new Error(
+//                         "There is no products with this Category"
+//                     );
+//                     error.statusCode = 422;
+//                     throw error;
+//                 }
+//                 return res
+//                     .status(200)
+//                     .json({ message: "Category Products", products: products });
+//             })
+//             .catch((error) => {
+//                 next(error);
+//             });
+//     }
+// };
