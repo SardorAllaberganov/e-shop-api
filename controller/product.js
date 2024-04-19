@@ -3,7 +3,7 @@ const Category = require("../model/category");
 const clearImage = require("../helper/clearImage");
 const mongoose = require("mongoose");
 
-const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
+const isValidId = (id) => mongoose.isValidObjectId(id);
 
 exports.products = (req, res, next) => {
     const currentPage = req.query.page || 1;
