@@ -238,3 +238,56 @@ exports.editProduct = (req, res, next) => {
         return res.status(400).json({ message: "Not valid category ID" });
     }
 };
+
+exports.deleteProduct = (req, res, next) => {
+    const id = req.params.id;
+
+    const isValid = isValidId(id);
+    if (isValid) {
+        Product.findById(id)
+            .then((product) => {
+                if (!product) {
+                    const error = new Error("Product not found to delete!");
+                    error.statusCode = 422;
+                    throw error;
+                }
+
+                return Product.deleteOne({ _id: id })
+                    .then(() => {
+                        if (product.image) {
+                            clearImage(product.image, (error) => {
+                                if (error) {
+                                    const error = new Error("No image icon");
+                                    error.statusCode = 422;
+                                    throw error;
+                                }
+                            });
+                        }
+                        if (product.images) {
+                            product.images.forEach((imagePath) => {
+                                clearImage(imagePath, (error) => {
+                                    if (error) {
+                                        const error = new Error(
+                                            "No image icon"
+                                        );
+                                        error.statusCode = 422;
+                                        throw error;
+                                    }
+                                });
+                            });
+                        }
+                    })
+                    .catch((error) => {
+                        next(error);
+                    });
+            })
+            .then((result) => {
+                return res.status(200).json({
+                    message: `Product deleted`,
+                });
+            })
+            .catch((error) => {
+                next(error);
+            });
+    }
+};
