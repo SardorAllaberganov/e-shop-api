@@ -1,6 +1,9 @@
 const Product = require("../model/product");
 const Category = require("../model/category");
 const clearImage = require("../helper/clearImage");
+const mongoose = require("mongoose");
+
+const isValidId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 exports.products = (req, res, next) => {
     const currentPage = req.query.page || 1;
@@ -39,60 +42,87 @@ exports.createProduct = (req, res, next) => {
         throw error;
     }
 
-    Category.findById(req.body.category)
-        .then((categoryDoc) => {
-            if (!categoryDoc) {
-                clearImage(imageFile.path, (error) => {
-                    if (error) {
-                        const error = new Error("No image icon");
-                        error.statusCode = 422;
-                        throw error;
-                    }
-                });
-                imagesPaths.forEach((imagePath) => {
-                    clearImage(imagePath, (error) => {
-                        if (error) {
-                            const error = new Error("No image icon");
-                            error.statusCode = 422;
-                            throw error;
-                        }
-                    });
-                });
-                const error = new Error("Category not found");
-                error.statusCode = 404;
+    const errorCaseClearImages = () => {
+        clearImage(imageFile.path, (error) => {
+            if (error) {
+                const error = new Error("No image icon");
+                error.statusCode = 422;
                 throw error;
-            } else {
-                const product = new Product({
-                    name: req.body.name,
-                    description: req.body.description,
-                    richDescription: req.body.richDescription,
-                    image: imageFile.path,
-                    images: imagesPaths,
-                    brand: req.body.brand,
-                    price: req.body.price,
-                    category: req.body.category,
-                    countInStock: req.body.countInStock,
-                    rating: req.body.rating,
-                    numReviews: req.body.numReviews,
-                    isFeatured: req.body.isFeatured,
-                });
-                product
-                    .save()
-                    .then((result) => {
-                        res.status(201).json({
-                            message: "Product created successfully!!!",
-                            product: product,
-                        });
-                    })
-                    .catch((error) => {
-                        next(error);
-                    });
             }
-        })
-        .catch((error) => next(error));
+        });
+        imagesPaths.forEach((imagePath) => {
+            clearImage(imagePath, (error) => {
+                if (error) {
+                    const error = new Error("No image icon");
+                    error.statusCode = 422;
+                    throw error;
+                }
+            });
+        });
+    };
+    const isValid = isValidId(req.body.category);
+    if (isValid) {
+        Category.findById(req.body.category)
+            .then((categoryDoc) => {
+                if (!categoryDoc) {
+                    errorCaseClearImages();
+                    const error = new Error("Category not found");
+                    error.statusCode = 404;
+                    throw error;
+                } else {
+                    const product = new Product({
+                        name: req.body.name,
+                        description: req.body.description,
+                        richDescription: req.body.richDescription,
+                        image: imageFile.path,
+                        images: imagesPaths,
+                        brand: req.body.brand,
+                        price: req.body.price,
+                        category: req.body.category,
+                        countInStock: req.body.countInStock,
+                        rating: req.body.rating,
+                        numReviews: req.body.numReviews,
+                        isFeatured: req.body.isFeatured,
+                    });
+                    product
+                        .save()
+                        .then((result) => {
+                            res.status(201).json({
+                                message: "Product created successfully!!!",
+                                product: product,
+                            });
+                        })
+                        .catch((error) => {
+                            next(error);
+                        });
+                }
+            })
+            .catch((error) => next(error));
+    } else {
+        errorCaseClearImages();
+        return res.status(400).json({ message: "Not valid category ID" });
+    }
 };
-// app.get("/", (req, res, next) => {
-//     const error = new Error("Testing error middleware");
-//     error.statusCode = 400;
-//     next(error);
-// });
+
+exports.product = (req, res, next) => {
+    const id = req.params.id;
+    const isValid = isValidId(id);
+    if (isValid) {
+        Product.findById(id)
+            .then((product) => {
+                if (!product) {
+                    const error = new Error("Product not found");
+                    error.statusCode = 404;
+                    throw error;
+                }
+                return res
+                    .status(200)
+                    .json({ message: "Product found", product: product });
+            })
+            .catch((error) => {
+                next(error);
+            });
+    } else {
+        return res.status(400).json({ message: "Not valid ID" });
+    }
+};

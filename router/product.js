@@ -4,6 +4,7 @@ const productController = require("../controller/product");
 const uploads = require("../middleware/file-upload");
 
 router.get("/", productController.products);
+router.get("/:id", productController.product);
 router.post(
     "/create",
     uploads.fields([
