@@ -30,14 +30,15 @@ const productRoutes = require("./router/product");
 const categoryRoutes = require("./router/category");
 const userRoutes = require("./router/user");
 
+
+// router.post("/sendMail", userController.sendMail);
+
+
 //middlewares
 app.use(express.json());
-// app.use(express.urlencoded());
-// app.use(express.urlencoded({ extended: false }));
-// app.use(express.multipart())
 app.use(morgan("dev"));
-// const formData = require("express-form-data");
-// app.use(formData.parse());
+
+// app.use(`${API}/sendMail`, userRoutes);
 
 app.use(`${API}/products`, productRoutes);
 app.use(`${API}/categories`, categoryRoutes);
