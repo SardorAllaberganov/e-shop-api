@@ -2,7 +2,6 @@ const Product = require("../model/product");
 const Category = require("../model/category");
 const clearImage = require("../helper/clearImage");
 const mongoose = require("mongoose");
-const { category } = require("./category");
 
 const isValidId = (id) => mongoose.isValidObjectId(id);
 
