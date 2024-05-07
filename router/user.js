@@ -23,6 +23,26 @@ router.post(
     ],
     userController.createUsers
 );
+
+router.post(
+    "/register",
+    [
+        body("email")
+            .isEmail()
+            .not()
+            .isEmpty()
+            .withMessage("Email cannot be an empty")
+            .custom(async (value, { req }) => {
+                const result = await User.findOne({ email: value });
+                if (result) {
+                    return await Promise.reject("Email address already exists");
+                }
+            })
+            .normalizeEmail(),
+    ],
+    userController.register
+);
+
 router.get("/:id", userController.getUser);
 router.post(
     "/login",
