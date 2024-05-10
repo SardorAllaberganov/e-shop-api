@@ -38,7 +38,15 @@ const secret = process.env.JWT_SECRET;
 app.use(express.json());
 app.use(morgan("dev"));
 app.use(
-    jwt({ secret, algorithms: ["HS256"] }).unless({
+    jwt({
+        secret,
+        algorithms: ["HS256"],
+        isRevoked: async function isRevoked(req, token) {
+            if (!token.payload.user.isAdmin) {
+                return true;
+            }
+        },
+    }).unless({
         path: [
             { url: /\/api\/v1\/products(.*)/, methods: ["GET", "OPTIONS"] },
             { url: /\/api\/v1\/categories(.*)/, methods: ["GET", "OPTIONS"] },

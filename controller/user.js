@@ -3,6 +3,8 @@ const { validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+const mongoose = require("mongoose");
+const isValidId = (id) => mongoose.isValidObjectId(id);
 
 exports.getUsers = (req, res, next) => {
     User.find()
@@ -108,6 +110,7 @@ exports.login = (req, res, next) => {
                             user: {
                                 id: user._id,
                                 name: user.name,
+                                isAdmin: user.isAdmin,
                                 email: user.email,
                             },
                         },
@@ -176,4 +179,30 @@ exports.register = (req, res, next) => {
         .catch((error) => {
             next(error);
         });
+};
+
+exports.deleteUser = (req, res, next) => {
+    const id = req.params.id;
+
+    const isValid = isValidId(id);
+    if (isValid) {
+        User.findById(id)
+            .then((user) => {
+                if (!user) {
+                    const error = new Error("User not found to delete!");
+                    error.statusCode = 422;
+                    throw error;
+                }
+
+                return User.deleteOne({ _id: id });
+            })
+            .then((result) => {
+                return res.status(200).json({
+                    message: `User deleted`,
+                });
+            })
+            .catch((error) => {
+                next(error);
+            });
+    }
 };
