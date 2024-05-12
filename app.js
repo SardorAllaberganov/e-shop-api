@@ -29,6 +29,7 @@ app.use((req, res, next) => {
 const productRoutes = require("./router/product");
 const categoryRoutes = require("./router/category");
 const userRoutes = require("./router/user");
+const orderRoutes = require("./router/orders");
 const { expressjwt: jwt } = require("express-jwt");
 const secret = process.env.JWT_SECRET;
 
@@ -61,6 +62,7 @@ app.use(
 app.use(`${API}/products`, productRoutes);
 app.use(`${API}/categories`, categoryRoutes);
 app.use(`${API}/users`, userRoutes);
+app.use(`${API}/orders`, orderRoutes);
 
 app.use(
     "/uploads/images",
