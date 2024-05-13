@@ -167,3 +167,28 @@ exports.deleteOrder = (req, res, next) => {
         return res.status(400).json({ message: "Not valid ID" });
     }
 };
+
+exports.getTotalSales = (req, res, next) => {
+    Order.aggregate([
+        {
+            $group: {
+                _id: null,
+                totalSales: { $sum: "$totalPrice" },
+            },
+        },
+    ])
+        .then((sales) => {
+            if (!sales) {
+                const error = new Error("No sales found");
+                error.statusCode = 404;
+                throw error;
+            }
+            return res.status(200).json({
+                message: "Total sales",
+                totalSales: sales[0].totalSales.toLocaleString("fi-FI"),
+            });
+        })
+        .catch((error) => {
+            next(error);
+        });
+};
