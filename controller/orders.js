@@ -1,11 +1,16 @@
 const Order = require("../model/orders");
 const OrderItem = require("../model/orderItem");
-const { populate } = require("dotenv");
+const mongoose = require("mongoose");
+
+const isValidId = (id) => mongoose.isValidObjectId(id);
 
 exports.getAll = (req, res, next) => {
     Order.find()
         .populate("user", "name")
-        .populate({path: "orderItems", populate: {path: "product", populate: "category"}})
+        .populate({
+            path: "orderItems",
+            populate: { path: "product", populate: "category" },
+        })
         .sort({ dateOrdered: -1 })
         .then((ordersList) => {
             if (!ordersList) {
@@ -22,20 +27,32 @@ exports.getAll = (req, res, next) => {
         });
 };
 exports.getOne = (req, res, next) => {
-    Order.findById(req.params.id)
-        .populate("user", "name")
-        .populate({path: "orderItems", populate: {path: "product", populate: "category"}})
-        .then((order) => {
-            if (!order) {
-                const error = new Error("No order found");
-                error.statusCode = 404;
-                throw error;
-            }
-            return res.status(200).json({ message: "One Order", order: order });
-        })
-        .catch((error) => {
-            next(error);
-        });
+    const orderId = req.params.id;
+    const isValid = isValidId(orderId);
+    if (isValid) {
+        Order.findById(orderId)
+            .populate("user", "name")
+            .populate({
+                path: "orderItems",
+                populate: { path: "product", populate: "category" },
+            })
+            .then((order) => {
+                if (!order) {
+                    const error = new Error("No order found");
+                    error.statusCode = 404;
+                    throw error;
+                }
+                return res
+                    .status(200)
+                    .json({ message: "One Order", order: order });
+            })
+            .catch((error) => {
+                next(error);
+            });
+    }
+    else {
+        return res.status(400).json({ message: "Not valid ID" });
+    }
 };
 
 exports.createOrder = async (req, res, next) => {
@@ -74,4 +91,38 @@ exports.createOrder = async (req, res, next) => {
         .catch((error) => {
             next(error);
         });
+};
+
+exports.editOrder = (req, res, next) => {
+    const orderId = req.params.id;
+    const isValid = isValidId(orderId);
+    if (isValid) {
+        Order.findById(orderId)
+            .then((order) => {
+                if (!order) {
+                    const error = new Error("Order not found!");
+                    error.statusCode = 422;
+                    throw error;
+                }
+
+                order.status = req.body.status;
+
+                order
+                    .save()
+                    .then((result) => {
+                        return res.status(201).json({
+                            message: "Order saved successfully",
+                            order: order,
+                        });
+                    })
+                    .catch((error) => {
+                        next(error);
+                    });
+            })
+            .catch((error) => {
+                next(error);
+            });
+    } else {
+        return res.status(400).json({ message: "Not valid ID" });
+    }
 };
