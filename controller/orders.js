@@ -55,7 +55,7 @@ exports.getOne = (req, res, next) => {
 };
 
 exports.createOrder = async (req, res, next) => {
-    const orderList = Promise.all(
+    const orderList = await Promise.all(
         req.body.orderItems.map(async (orderItem) => {
             let newOrderItem = new OrderItem({
                 quantity: orderItem.quantity,
@@ -66,10 +66,20 @@ exports.createOrder = async (req, res, next) => {
             return newOrderItem._id;
         })
     );
-    const orderListIds = await orderList;
+    let sumTotalPrice = 0;
+    await Promise.all(
+        orderList.map(async (orderItemId) => {
+            const orderItem = await OrderItem.findById(orderItemId).populate(
+                "product",
+                "price"
+            );
+            const totalPrice = orderItem.product.price * orderItem.quantity;
+            sumTotalPrice += totalPrice;
+        })
+    );
 
     const order = new Order({
-        orderItems: orderListIds,
+        orderItems: orderList,
         shippingAddress1: req.body.shippingAddress1,
         shippingAddress2: req.body.shippingAddress2,
         city: req.body.city,
@@ -77,7 +87,7 @@ exports.createOrder = async (req, res, next) => {
         country: req.body.country,
         phone: req.body.phone,
         status: req.body.status,
-        totalPrice: req.body.totalPrice,
+        totalPrice: sumTotalPrice,
         user: req.body.userId,
     });
     return order
