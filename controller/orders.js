@@ -125,3 +125,35 @@ exports.editOrder = (req, res, next) => {
         return res.status(400).json({ message: "Not valid ID" });
     }
 };
+
+exports.deleteOrder = (req, res, next) => {
+    const orderId = req.params.id;
+    const isValid = isValidId(orderId);
+    if (isValid) {
+        Order.findByIdAndDelete(orderId)
+            .then((order) => {
+                if (!order) {
+                    const error = new Error("Order not found to delete!");
+                    error.statusCode = 422;
+                    throw error;
+                }
+                return Promise.all(
+                    order.orderItems.map((orderItem) => {
+                        return OrderItem.findOneAndDelete({
+                            _id: orderItem._id,
+                        });
+                    })
+                );
+            })
+            .then(() => {
+                return res.status(200).json({
+                    message: `Order is deleted`,
+                });
+            })
+            .catch((error) => {
+                next(error);
+            });
+    } else {
+        return res.status(400).json({ message: "Not valid ID" });
+    }
+};
