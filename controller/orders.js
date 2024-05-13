@@ -49,8 +49,7 @@ exports.getOne = (req, res, next) => {
             .catch((error) => {
                 next(error);
             });
-    }
-    else {
+    } else {
         return res.status(400).json({ message: "Not valid ID" });
     }
 };
