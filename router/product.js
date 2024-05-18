@@ -18,11 +18,11 @@ router.post(
 	uploads.fields([
 		{ name: "image", maxCount: 1 },
 		{ name: "images", maxCount: 10 },
-	]),
+	]), 
 	productController.createProduct
 );
 router.delete("/:id", productController.deleteProduct);
 router.get("/get/featured", productController.getFeatured);
-// router.get("/get/filterByCategory", productController.filterByCategory);
-router.get("/search", productController.search);
+router.get("/get/search", productController.searchProduct);
+router.get("/get/filter", productController.getFiltered);
 module.exports = router;

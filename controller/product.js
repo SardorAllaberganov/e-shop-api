@@ -320,9 +320,8 @@ exports.getFeatured = (req, res, next) => {
 		});
 };
 
-exports.search = (req, res, next) => {
-	const query = req.params.query;
-    console.log(query);
+exports.searchProduct = (req, res, next) => {
+	const query = req.query.name;
 
 	Product.find({ name: { $regex: query, $options: "i" } })
 		.then((products) => {
@@ -331,7 +330,46 @@ exports.search = (req, res, next) => {
 				error.statusCode = 422;
 				throw error;
 			}
-            return res.json({ message: "Products", products: products });
+			return res.json({ message: "Products", products: products });
+		})
+		.catch((error) => {
+			next(error);
+		});
+};
+
+exports.getFiltered = async (req, res, next) => {
+	const { categoryName, minPrice, maxPrice, brand } = req.query;
+	let filter = {};
+
+	const category = await Category.findOne({ name: categoryName });
+	if (!category) {
+		const error = new Error("There is no such category");
+		error.statusCode = 422;
+		throw error;
+	}
+	filter.category = category._id;
+
+	if (brand) {
+		filter.brand = { $regex: brand.trim(), $options: "i" };
+	}
+	if (minPrice && maxPrice) {
+		filter.price = { $gte: minPrice, $lte: maxPrice };
+	} else if (minPrice) {
+		filter.price = { $gte: minPrice };
+	} else if (maxPrice) {
+		filter.price = { $lte: maxPrice };
+	}
+
+	Product.find(filter)
+		.then((products) => {
+			if (!products) {
+				const error = new Error("There is no such Products");
+				error.statusCode = 422;
+				throw error;
+			}
+			return res
+				.status(200)
+				.json({ message: "Filtered Products", products: products });
 		})
 		.catch((error) => {
 			next(error);
