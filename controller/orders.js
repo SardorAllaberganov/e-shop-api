@@ -2,29 +2,53 @@ const Order = require("../model/orders");
 const OrderItem = require("../model/orderItem");
 const mongoose = require("mongoose");
 
+const jwt = require("jsonwebtoken");
+
 const isValidId = (id) => mongoose.isValidObjectId(id);
 
+function isAuthenticated(req) {
+    const token = req.headers.authorization.split(" ")[1];
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    if (decodedToken) {
+        req.user = decodedToken;
+        return true;
+    }
+    return false;
+}
+
 exports.getAll = (req, res, next) => {
-    Order.find()
-        .populate("user", "name")
-        .populate({
-            path: "orderItems",
-            populate: { path: "product", populate: "category" },
-        })
-        .sort({ dateOrdered: -1 })
-        .then((ordersList) => {
-            if (!ordersList) {
-                const error = new Error("No orders found");
-                error.statusCode = 404;
-                throw error;
-            }
-            return res
-                .status(200)
-                .json({ message: "All orders", ordersList: ordersList });
-        })
-        .catch((error) => {
-            next(error);
-        });
+    if (isAuthenticated(req)) {
+        const isAdmin = req.user.user.isAdmin;
+        let query = {};
+        if (!isAdmin) {
+            query = { user: req.user.user.id };
+        }
+        Order.find(query)
+            .populate("user", "name")
+            .populate({
+                path: "orderItems",
+                populate: { path: "product", populate: "category" },
+            })
+            .sort({ dateOrdered: -1 })
+
+            .then((ordersList) => {
+                if (!ordersList) {
+                    const error = new Error("No orders found");
+                    error.statusCode = 404;
+                    throw error;
+                }
+                return res.status(200).json({
+                    message: "All orders",
+                    count: ordersList.length,
+                    ordersList: ordersList,
+                });
+            })
+            .catch((error) => {
+                next(error);
+            });
+    } else {
+        return res.status(401).json({ message: "Access Denied" });
+    }
 };
 exports.getOne = (req, res, next) => {
     const orderId = req.params.id;
@@ -55,51 +79,54 @@ exports.getOne = (req, res, next) => {
 };
 
 exports.createOrder = async (req, res, next) => {
-    const orderList = await Promise.all(
-        req.body.orderItems.map(async (orderItem) => {
-            let newOrderItem = new OrderItem({
-                quantity: orderItem.quantity,
-                product: orderItem.product,
-            });
-            newOrderItem = await newOrderItem.save();
+    if (isAuthenticated(req)) {
+        const orderList = await Promise.all(
+            req.body.orderItems.map(async (orderItem) => {
+                let newOrderItem = new OrderItem({
+                    quantity: orderItem.quantity,
+                    product: orderItem.product,
+                });
+                newOrderItem = await newOrderItem.save();
 
-            return newOrderItem._id;
-        })
-    );
-    let sumTotalPrice = 0;
-    await Promise.all(
-        orderList.map(async (orderItemId) => {
-            const orderItem = await OrderItem.findById(orderItemId).populate(
-                "product",
-                "price"
-            );
-            const totalPrice = orderItem.product.price * orderItem.quantity;
-            sumTotalPrice += totalPrice;
-        })
-    );
+                return newOrderItem._id;
+            })
+        );
+        let sumTotalPrice = 0;
+        await Promise.all(
+            orderList.map(async (orderItemId) => {
+                const orderItem = await OrderItem.findById(
+                    orderItemId
+                ).populate("product", "price");
+                const totalPrice = orderItem.product.price * orderItem.quantity;
+                sumTotalPrice += totalPrice;
+            })
+        );
 
-    const order = new Order({
-        orderItems: orderList,
-        shippingAddress1: req.body.shippingAddress1,
-        shippingAddress2: req.body.shippingAddress2,
-        city: req.body.city,
-        zip: req.body.zip,
-        country: req.body.country,
-        phone: req.body.phone,
-        status: req.body.status,
-        totalPrice: sumTotalPrice,
-        user: req.body.userId,
-    });
-    return order
-        .save()
-        .then((result) => {
-            return res
-                .status(201)
-                .json({ message: "Order created", order: result });
-        })
-        .catch((error) => {
-            next(error);
+        const order = new Order({
+            orderItems: orderList,
+            shippingAddress1: req.body.shippingAddress1,
+            shippingAddress2: req.body.shippingAddress2,
+            city: req.body.city,
+            zip: req.body.zip,
+            country: req.body.country,
+            phone: req.body.phone,
+            status: req.body.status,
+            totalPrice: sumTotalPrice,
+            user: req.user.user.id,
         });
+        return order
+            .save()
+            .then((result) => {
+                return res
+                    .status(201)
+                    .json({ message: "Order created", order: result });
+            })
+            .catch((error) => {
+                next(error);
+            });
+    } else {
+        return res.status(401).json({ message: "Access Denied" });
+    }
 };
 
 exports.editOrder = (req, res, next) => {
@@ -120,7 +147,7 @@ exports.editOrder = (req, res, next) => {
                     .save()
                     .then((result) => {
                         return res.status(201).json({
-                            message: "Order saved successfully",
+                            message: "Order status is changed successfully",
                             order: order,
                         });
                     })
